@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mausam — Personalized Weather Homepage</title>
+  <style>
+    /* ───────── RESET & BASE ───────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary:    #0f1923;
+      --bg-secondary:  #141f2b;
+      --bg-card:       #1a2735;
+      --bg-card-hover: #243447;
+      --accent:        #00b4d8;
+      --accent-glow:   rgba(0, 180, 216, 0.28);
+      --text-primary:  #e8edf2;
+      --text-secondary:#8899aa;
+      --border:        #2a3a4a;
+      --danger:        #ff6b6b;
+      --warning:       #ffa94d;
+      --success:       #51cf66;
+      --radius:        16px;
+      --radius-sm:     10px;
+      --transition:    0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 20%, rgba(0,180,216,0.12) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 80%, rgba(0,180,216,0.06) 0%, transparent 55%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ───────── TOP NAV ───────── */
+    .topnav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15,25,35,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(42,58,74,0.5);
+      padding: 0 32px;
+    }
+
+    .topnav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-text {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      background: linear-gradient(135deg, var(--accent), #90e0ef);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .nav-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      background: rgba(0,180,216,0.1);
+      border: 1px solid rgba(0,180,216,0.25);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-btn-ghost {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      transition: all var(--transition);
+      cursor: pointer;
+    }
+
+    .nav-btn-ghost:hover {
+      color: var(--text-primary);
+      background: rgba(255,255,255,0.04);
+    }
+
+    .nav-btn-primary {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), #0096c7);
+      text-decoration: none;
+      padding: 8px 18px;
+      border-radius: var(--radius-sm);
+      box-shadow: 0 4px 15px var(--accent-glow);
+      transition: all var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 22px rgba(0,180,216,0.45);
+    }
+
+    /* ───────── HERO SECTION ───────── */
+    .hero-section {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 50px 32px 40px;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      align-items: center;
+      gap: 48px;
+      flex: 1;
+    }
+
+    .hero-content {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0,180,216,0.1);
+      border: 1px solid rgba(0,180,216,0.25);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 13px;
+      color: var(--accent);
+      font-weight: 600;
+      width: fit-content;
+    }
+
+    .hero-badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    .hero-title {
+      font-size: 46px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.5px;
+    }
+
+    .hero-title .gradient-text {
+      background: linear-gradient(135deg, #fff 30%, #90e0ef 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-title .accent-text {
+      background: linear-gradient(135deg, var(--accent), #48cae4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-description {
+      font-size: 17px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+      max-width: 540px;
+    }
+
+    /* CTA BUTTON GROUP */
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .btn-get-started {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 34px;
+      background: linear-gradient(135deg, var(--accent), #0096c7);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      box-shadow: 0 6px 26px var(--accent-glow);
+      transition: all var(--transition);
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-get-started:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 32px rgba(0,180,216,0.45);
+    }
+
+    .btn-get-started svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 2.5;
+      fill: none;
+      transition: transform var(--transition);
+    }
+
+    .btn-get-started:hover svg {
+      transform: translateX(4px);
+    }
+
+    .btn-resume {
+      display: none; /* Shown dynamically if user already set location/interests */
+      align-items: center;
+      gap: 8px;
+      padding: 15px 24px;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid var(--border);
+      color: var(--text-primary);
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      transition: all var(--transition);
+    }
+
+    .btn-resume:hover {
+      border-color: var(--accent);
+      background: rgba(0,180,216,0.08);
+      color: var(--accent);
+    }
+
+    /* SEGMENT CHIPS */
+    .hero-segments {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .segment-chip {
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* ───────── WEATHER HERO VISUAL ───────── */
+    .hero-visual {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .visual-card-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    /* Outer glow circle */
+    .visual-glow {
+      position: absolute;
+      inset: -20px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,180,216,0.2) 0%, transparent 65%);
+      filter: blur(30px);
+      z-index: 0;
+      animation: pulseGlow 6s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulseGlow {
+      from { transform: scale(0.95); opacity: 0.7; }
+      to   { transform: scale(1.08); opacity: 1; }
+    }
+
+    /* Floating main glass weather illustration */
+    .visual-main-card {
+      position: relative;
+      z-index: 1;
+      background: linear-gradient(145deg, rgba(26,39,53,0.92) 0%, rgba(15,25,35,0.95) 100%);
+      border: 1.5px solid rgba(0,180,216,0.25);
+      border-radius: 24px;
+      padding: 32px 28px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+      backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      animation: floatCard 6s ease-in-out infinite;
+    }
+
+    @keyframes floatCard {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-10px); }
+    }
+
+    .vmc-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .vmc-loc {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .vmc-live {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--success);
+      background: rgba(81,207,102,0.12);
+      border: 1px solid rgba(81,207,102,0.25);
+      padding: 3px 8px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .vmc-temp-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .vmc-art {
+      font-size: 64px;
+      line-height: 1;
+      filter: drop-shadow(0 6px 18px rgba(0,180,216,0.3));
+    }
+
+    .vmc-temp {
+      font-size: 58px;
+      font-weight: 200;
+      letter-spacing: -2px;
+      line-height: 1;
+    }
+
+    .vmc-temp sup {
+      font-size: 26px;
+      font-weight: 400;
+      color: var(--text-secondary);
+    }
+
+    .vmc-condition {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .vmc-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .vmc-stat {
+      background: rgba(0,0,0,0.25);
+      border-radius: 10px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .vmc-stat-lbl {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .vmc-stat-val {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* Floating badges surrounding card */
+    .floating-badge {
+      position: absolute;
+      z-index: 2;
+      background: rgba(20,31,43,0.92);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 14px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      animation: floatBadge 5s ease-in-out infinite alternate;
+    }
+
+    .badge-top-right {
+      top: -16px;
+      right: -16px;
+      border-color: rgba(0,180,216,0.4);
+      animation-delay: 0.5s;
+    }
+
+    .badge-bottom-left {
+      bottom: -16px;
+      left: -16px;
+      border-color: rgba(81,207,102,0.4);
+      animation-delay: 1.2s;
+    }
+
+    @keyframes floatBadge {
+      from { transform: translateY(0); }
+      to   { transform: translateY(-8px); }
+    }
+
+    /* ───────── FLOW TIMELINE SECTION ───────── */
+    .flow-section {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 20px auto 40px;
+      padding: 0 32px;
+      width: 100%;
+    }
+
+    .flow-header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .flow-header h2 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .flow-header p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      max-width: 580px;
+      margin: 0 auto;
+    }
+
+    .flow-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .flow-card {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 26px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+      transition: all var(--transition);
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .flow-card:hover {
+      border-color: rgba(0,180,216,0.35);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+    }
+
+    .flow-step-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(0,180,216,0.12);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .flow-card-icon {
+      font-size: 32px;
+      line-height: 1;
+      margin-top: 4px;
+    }
+
+    .flow-card-title {
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .flow-card-desc {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    .flow-card-link {
+      margin-top: auto;
+      font-size: 13px;
+      color: var(--accent);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* ───────── FOOTER ───────── */
+    .app-footer {
+      width: 100%;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      padding: 36px 24px 44px;
+      position: relative;
+      z-index: 10;
+      margin-top: auto;
+    }
+
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .footer-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .footer-brand {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .footer-logo {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      background: linear-gradient(135deg, var(--accent), #90e0ef);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .footer-tagline {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .footer-team-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: rgba(0,180,216,0.08);
+      border: 1px solid rgba(0,180,216,0.2);
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .footer-divider {
+      height: 1px;
+      background: rgba(42,58,74,0.6);
+      width: 100%;
+    }
+
+    .footer-content {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .footer-rights {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .footer-authors {
+      font-size: 14px;
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+
+    .footer-authors strong {
+      color: #90e0ef;
+      font-weight: 600;
+    }
+
+    .footer-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .f-chip {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    /* ───────── MOBILE RESPONSIVE ───────── */
+    @media (max-width: 900px) {
+      .hero-section {
+        grid-template-columns: 1fr;
+        padding: 36px 20px 30px;
+        gap: 36px;
+        text-align: center;
+      }
+
+      .hero-content {
+        align-items: center;
+      }
+
+      .hero-title {
+        font-size: 34px;
+      }
+
+      .hero-description {
+        font-size: 15px;
+      }
+
+      .hero-actions {
+        justify-content: center;
+      }
+
+      .hero-segments {
+        justify-content: center;
+      }
+
+      .flow-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+
+      .visual-card-wrap {
+        max-width: 340px;
+      }
+
+      .floating-badge {
+        display: none; /* Hide floating chips on narrow mobile for cleaner layout */
+      }
+    }
+
+    @media (max-width: 480px) {
+      .topnav {
+        padding: 0 16px;
+      }
+
+      .hero-title {
+        font-size: 28px;
+      }
+
+      .btn-get-started {
+        width: 100%;
+        justify-content: center;
+        padding: 14px 20px;
+      }
+
+      .flow-section {
+        padding: 0 16px;
+      }
+
+      .app-footer {
+        padding: 26px 16px 34px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ TOP NAVIGATION ═══ -->
+  <nav class="topnav">
+    <div class="topnav-inner">
+      <a href="index.html" class="nav-brand">
+        <div class="logo-icon">
+          <svg width="34" height="34" viewBox="0 0 36 36" fill="none">
+            <circle cx="18" cy="18" r="16" stroke="url(#navGrad)" stroke-width="2"/>
+            <path d="M12 20 Q14 12 18 14 Q22 16 20 22 Q18 26 14 24 Q10 22 12 20Z" fill="url(#navGrad)" opacity="0.6"/>
+            <circle cx="22" cy="12" r="3" fill="#90e0ef" opacity="0.8"/>
+            <defs>
+              <linearGradient id="navGrad" x1="0" y1="0" x2="36" y2="36">
+                <stop offset="0%" stop-color="#00b4d8"/>
+                <stop offset="100%" stop-color="#90e0ef"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <span class="logo-text">MAUSAM</span>
+        <span class="nav-badge">SIH26076</span>
+      </a>
+
+      <div class="nav-actions">
+        <a href="user_intrest.html" class="nav-btn-ghost">Interests</a>
+        <a href="user_location.html" class="nav-btn-ghost">Location</a>
+        <a href="mainUI.html" class="nav-btn-primary" id="navDashboardBtn">
+          Dashboard
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══ HERO SECTION ═══ -->
+  <header class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        Personalized Weather Intelligence
+      </div>
+
+      <h1 class="hero-title">
+        <span class="gradient-text">One Weather Platform.</span><br />
+        <span class="accent-text">Eight Human Needs.</span>
+      </h1>
+
+      <p class="hero-description">
+        Mausam moves from a <em>forecast-first</em> interface to a <em>decision-first</em> homepage. Select what matters to you and get a dashboard that ranks live satellite weather, air quality, tides, and soil data tailored to your day.
+      </p>
+
+      <div class="hero-actions">
+        <a href="user_intrest.html" class="btn-get-started" id="startFlowBtn">
+          Get Started
+          <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+
+        <!-- Dynamic button shown if user already saved preferences -->
+        <a href="mainUI.html" class="btn-resume" id="resumeBtn">
+          ⚡ Open Saved Dashboard (<span id="savedCityName">—</span>)
+        </a>
+      </div>
+
+      <div class="hero-segments">
+        <span class="segment-chip">🫁 Health & AQI</span>
+        <span class="segment-chip">🏃 Fitness Windows</span>
+        <span class="segment-chip">🏖️ Coastal Tides</span>
+        <span class="segment-chip">✈️ Smart Travel</span>
+        <span class="segment-chip">🌾 Soil Moisture</span>
+        <span class="segment-chip">🚗 Commute Safety</span>
+      </div>
+    </div>
+
+    <!-- ═══ HERO WEATHER VISUAL ═══ -->
+    <div class="hero-visual">
+      <div class="visual-card-wrap">
+        <div class="visual-glow"></div>
+
+        <!-- Floating Badge Top -->
+        <div class="floating-badge badge-top-right">
+          <span>🍃</span> US AQI 42 • Good
+        </div>
+
+        <!-- Main Glass Card -->
+        <div class="visual-main-card">
+          <div class="vmc-header">
+            <span class="vmc-loc">📍 Live Satellite Radar</span>
+            <span class="vmc-live"><span style="width:6px;height:6px;border-radius:50%;background:#51cf66"></span> OPEN-METEO</span>
+          </div>
+
+          <div class="vmc-temp-row">
+            <div class="vmc-art">⛅</div>
+            <div class="vmc-temp">28<sup>°C</sup></div>
+          </div>
+
+          <div class="vmc-condition">Partly Cloudy • Optimal Running Window</div>
+
+          <div class="vmc-stats">
+            <div class="vmc-stat">
+              <div class="vmc-stat-lbl">UV Index</div>
+              <div class="vmc-stat-val">5 (Moderate)</div>
+            </div>
+            <div class="vmc-stat">
+              <div class="vmc-stat-lbl">Wind Gusts</div>
+              <div class="vmc-stat-val">14 km/h NE</div>
+            </div>
+            <div class="vmc-stat">
+              <div class="vmc-stat-lbl">Topsoil Moisture</div>
+              <div class="vmc-stat-val">42% (Adequate)</div>
+            </div>
+            <div class="vmc-stat">
+              <div class="vmc-stat-lbl">Rain Probability</div>
+              <div class="vmc-stat-val">15% (Low Risk)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating Badge Bottom -->
+        <div class="floating-badge badge-bottom-left">
+          <span>🌾</span> Agriculture & Garden Optimized
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══ LOGIC FLOW / HOW IT WORKS ═══ -->
+  <section class="flow-section">
+    <div class="flow-header">
+      <h2>How Mausam Personalizes Your Day</h2>
+      <p>Three streamlined steps to convert complex climate telemetry into clear decisions.</p>
+    </div>
+
+    <div class="flow-grid">
+      <!-- Step 1 -->
+      <a href="user_intrest.html" class="flow-card">
+        <div class="flow-step-num">1</div>
+        <div class="flow-card-icon">🫀</div>
+        <div class="flow-card-title">Select Your Interests</div>
+        <div class="flow-card-desc">
+          Choose from 8 distinct personas (Health, Fitness, Beach, Family, Agriculture, Commute). The algorithm maps your needs to relevant widgets.
+        </div>
+        <div class="flow-card-link">
+          Start Step 1 <span>→</span>
+        </div>
+      </a>
+
+      <!-- Step 2 -->
+      <a href="user_location.html" class="flow-card">
+        <div class="flow-step-num">2</div>
+        <div class="flow-card-icon">📍</div>
+        <div class="flow-card-title">Set Your Coordinates</div>
+        <div class="flow-card-desc">
+          Detect your exact latitude and longitude via GPS with one tap, or drop a pin anywhere on the dark interactive OpenStreetMap.
+        </div>
+        <div class="flow-card-link">
+          Configure Location <span>→</span>
+        </div>
+      </a>
+
+      <!-- Step 3 -->
+      <a href="mainUI.html" class="flow-card">
+        <div class="flow-step-num">3</div>
+        <div class="flow-card-icon">⚡</div>
+        <div class="flow-card-title">Adaptive Live Dashboard</div>
+        <div class="flow-card-desc">
+          Real-time sensor fusion ranks matched modules, evaluates severe weather anomalies, and delivers a mobile-first interactive timeline.
+        </div>
+        <div class="flow-card-link">
+          Preview Dashboard <span>→</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ═══ APP FOOTER ═══ -->
+  <footer class="app-footer">
+    <div class="footer-inner">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <span class="footer-logo">MAUSAM</span>
+          <span class="footer-tagline">Personalized Weather Homepage • SIH26076</span>
+        </div>
+        <div class="footer-team-badge">Team Kryptonians</div>
+      </div>
+      <div class="footer-divider"></div>
+      <div class="footer-content">
+        <p class="footer-rights">Rights yet to be reserved &copy; 2026 Mausam Project</p>
+        <p class="footer-authors">
+          Developed by <strong>Hariprasad P S</strong>, <strong>Kalangyiam M</strong>, and <strong>Harish M</strong>
+        </p>
+        <div class="footer-chips">
+          <span class="f-chip">⚡ Real-time Satellite Sync</span>
+          <span class="f-chip">🛰️ Open-Meteo & ECMWF Models</span>
+          <span class="f-chip">📍 OpenStreetMap Geocoding</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════════
+    //  SMART LOGIC FLOW ROUTING
+    // ═══════════════════════════════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', () => {
+      let savedInterests = null;
+      let savedLocation = null;
+
+      try { savedInterests = JSON.parse(localStorage.getItem('mausam_interests')); } catch(e){}
+      try { savedLocation  = JSON.parse(localStorage.getItem('mausam_location')); } catch(e){}
+
+      const resumeBtn = document.getElementById('resumeBtn');
+      const startBtn = document.getElementById('startFlowBtn');
+      const savedCityEl = document.getElementById('savedCityName');
+
+      // If user has completed both onboarding steps, show resume option
+      if (savedInterests && savedInterests.length > 0 && savedLocation && savedLocation.name) {
+        if (resumeBtn) {
+          resumeBtn.style.display = 'inline-flex';
+          if (savedCityEl) savedCityEl.textContent = savedLocation.name;
+        }
+        if (startBtn) {
+          startBtn.textContent = 'Change Preferences';
+        }
+      }
+    });
+  </script>
+</body>
+</html>

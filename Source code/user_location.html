@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mausam — Set Your Location</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    /* ───────── RESET & BASE ───────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary:   #0f1923;
+      --bg-card:      #1a2735;
+      --bg-card-hover:#243447;
+      --accent:       #00b4d8;
+      --accent-glow:  rgba(0, 180, 216, 0.25);
+      --text-primary: #e8edf2;
+      --text-secondary:#8899aa;
+      --border:       #2a3a4a;
+      --danger:       #ff6b6b;
+      --success:      #51cf66;
+      --radius:       14px;
+      --radius-sm:    10px;
+      --transition:   0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 30%, rgba(0,180,216,0.06) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(0,180,216,0.04) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ───────── HEADER ───────── */
+    .header {
+      width: 100%;
+      padding: 24px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, var(--accent), #90e0ef);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .back-btn {
+      margin-left: auto;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .back-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(0,180,216,0.05);
+    }
+
+    .back-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+    }
+
+    /* ───────── MAIN CONTENT ───────── */
+    .content {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 820px;
+      padding: 0 24px 48px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .step-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0,180,216,0.1);
+      border: 1px solid rgba(0,180,216,0.2);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 13px;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .step-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .step-dot.done {
+      background: var(--success);
+    }
+
+    .step-dot.active {
+      background: var(--accent);
+    }
+
+    .hero h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      line-height: 1.25;
+    }
+
+    .hero p {
+      font-size: 16px;
+      color: var(--text-secondary);
+      max-width: 520px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ───────── LOCATION METHOD CARDS ───────── */
+    .method-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .method-card {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .method-card:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(0,180,216,0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    }
+
+    .method-card.active {
+      border-color: var(--accent);
+      background: rgba(0,180,216,0.08);
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .method-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .method-card:first-child .method-icon {
+      background: rgba(81,207,102,0.1);
+    }
+
+    .method-card:last-child .method-icon {
+      background: rgba(0,180,216,0.1);
+    }
+
+    .method-info { flex: 1; }
+
+    .method-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+
+    .method-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    /* ───────── SEARCH BAR ───────── */
+    .search-wrapper {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
+      stroke: var(--text-secondary);
+      stroke-width: 2;
+      fill: none;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 14px 48px 14px 46px;
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+      transition: all var(--transition);
+    }
+
+    .search-input::placeholder {
+      color: var(--text-secondary);
+    }
+
+    .search-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .search-clear {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,0.05);
+      color: var(--text-secondary);
+      font-size: 16px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+      z-index: 2;
+    }
+
+    .search-clear.visible { display: flex; }
+    .search-clear:hover { background: rgba(255,107,107,0.15); color: var(--danger); }
+
+    /* ───────── SEARCH RESULTS DROPDOWN ───────── */
+    .search-results {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      max-height: 240px;
+      overflow-y: auto;
+      z-index: 50;
+      display: none;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    }
+
+    .search-results.open { display: block; }
+
+    .search-result-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background var(--transition);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      border-bottom: 1px solid rgba(42,58,74,0.5);
+    }
+
+    .search-result-item:last-child { border-bottom: none; }
+
+    .search-result-item:hover {
+      background: var(--bg-card-hover);
+    }
+
+    .result-pin {
+      color: var(--accent);
+      font-size: 16px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .result-text {
+      flex: 1;
+    }
+
+    .result-name {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .result-detail {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .search-loading {
+      padding: 20px;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    /* ───────── MAP CONTAINER ───────── */
+    .map-wrapper {
+      position: relative;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1.5px solid var(--border);
+      margin-bottom: 20px;
+      transition: border-color var(--transition);
+    }
+
+    .map-wrapper.has-pin {
+      border-color: var(--accent);
+    }
+
+    #map {
+      width: 100%;
+      height: 380px;
+      background: var(--bg-card);
+    }
+
+    .map-crosshair {
+      display: none;
+    }
+
+    /* Map instruction overlay */
+    .map-hint {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15,25,35,0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      z-index: 1000;
+      pointer-events: none;
+      white-space: nowrap;
+      transition: opacity var(--transition);
+    }
+
+    .map-hint.hidden { opacity: 0; }
+
+    /* ───────── Dark map tiles adjustments ───────── */
+    .leaflet-tile-pane {
+      filter: brightness(0.7) contrast(1.1) saturate(0.3) hue-rotate(180deg) invert(1);
+    }
+
+    .leaflet-control-zoom a {
+      background: var(--bg-card) !important;
+      color: var(--text-primary) !important;
+      border-color: var(--border) !important;
+    }
+
+    .leaflet-control-zoom a:hover {
+      background: var(--bg-card-hover) !important;
+    }
+
+    .leaflet-control-attribution {
+      background: rgba(15,25,35,0.7) !important;
+      color: var(--text-secondary) !important;
+      font-size: 10px !important;
+    }
+
+    .leaflet-control-attribution a {
+      color: var(--accent) !important;
+    }
+
+    /* Custom marker pulse */
+    .pulse-marker {
+      width: 20px;
+      height: 20px;
+      position: relative;
+    }
+
+    .pulse-marker .dot {
+      width: 14px;
+      height: 14px;
+      background: var(--accent);
+      border: 2.5px solid #fff;
+      border-radius: 50%;
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      z-index: 2;
+    }
+
+    .pulse-marker .ring {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      position: absolute;
+      top: 0;
+      left: 0;
+      animation: markerPulse 2s ease-out infinite;
+    }
+
+    @keyframes markerPulse {
+      0%   { transform: scale(1);   opacity: 0.8; }
+      100% { transform: scale(2.5); opacity: 0;   }
+    }
+
+    /* ───────── SELECTED LOCATION CARD ───────── */
+    .location-card {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 24px;
+      display: none;
+      animation: fadeInUp 0.4s ease;
+    }
+
+    .location-card.visible { display: block; }
+
+    .location-card.confirmed {
+      border-color: var(--success);
+      background: rgba(81,207,102,0.05);
+    }
+
+    .loc-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .loc-card-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: rgba(0,180,216,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .location-card.confirmed .loc-card-icon {
+      background: rgba(81,207,102,0.1);
+    }
+
+    .loc-card-title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .loc-card-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .loc-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .loc-detail {
+      background: rgba(0,0,0,0.15);
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+
+    .loc-detail-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 3px;
+    }
+
+    .loc-detail-value {
+      font-size: 14px;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ───────── GPS STATUS ───────── */
+    .gps-status {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 18px;
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      animation: fadeInUp 0.3s ease;
+    }
+
+    .gps-status.visible { display: flex; }
+
+    .gps-spinner {
+      width: 20px;
+      height: 20px;
+      border: 2.5px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .gps-status-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .gps-status.error {
+      border-color: var(--danger);
+      background: rgba(255,107,107,0.05);
+    }
+
+    .gps-status.error .gps-status-text {
+      color: var(--danger);
+    }
+
+    .gps-status.success {
+      border-color: var(--success);
+      background: rgba(81,207,102,0.05);
+    }
+
+    .gps-status.success .gps-status-text {
+      color: var(--success);
+    }
+
+    /* ───────── BOTTOM BAR / CTA ───────── */
+    .bottom-bar {
+      position: sticky;
+      bottom: 0;
+      background: linear-gradient(to top, var(--bg-primary) 60%, transparent);
+      padding: 24px 0 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .continue-btn {
+      width: 100%;
+      max-width: 400px;
+      padding: 16px 32px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .continue-btn.disabled {
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      cursor: not-allowed;
+      border: 1.5px solid var(--border);
+    }
+
+    .continue-btn.active {
+      background: linear-gradient(135deg, var(--accent), #0096c7);
+      color: #fff;
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+
+    .continue-btn.active:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 28px rgba(0,180,216,0.4);
+    }
+
+    .continue-btn.active:active {
+      transform: translateY(0);
+    }
+
+    .continue-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 2.5;
+      fill: none;
+      transition: transform var(--transition);
+    }
+
+    .continue-btn.active:hover svg {
+      transform: translateX(3px);
+    }
+
+    .hint-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* ───────── TOAST ───────── */
+    .toast {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--bg-card);
+      border: 1px solid var(--accent);
+      color: var(--text-primary);
+      padding: 12px 24px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.4s ease;
+      z-index: 9999;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ───────── ANIMATIONS ───────── */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .method-card:first-child { animation: fadeInUp 0.4s ease backwards 0.05s; }
+    .method-card:last-child  { animation: fadeInUp 0.4s ease backwards 0.12s; }
+    .search-wrapper          { animation: fadeInUp 0.4s ease backwards 0.18s; }
+    .map-wrapper             { animation: fadeInUp 0.4s ease backwards 0.24s; }
+
+    /* ───────── FOOTER ───────── */
+    .app-footer {
+      width: 100%;
+      background: rgba(20, 31, 43, 0.7);
+      border-top: 1px solid var(--border);
+      padding: 30px 24px 36px;
+      margin-top: auto;
+      position: relative;
+      z-index: 10;
+    }
+
+    .footer-inner {
+      max-width: 820px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      text-align: center;
+    }
+
+    .footer-logo {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, var(--accent), #90e0ef);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .footer-tagline {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .footer-rights {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+    }
+
+    .footer-authors {
+      font-size: 13.5px;
+      color: var(--text-primary);
+    }
+
+    .footer-authors strong {
+      color: #90e0ef;
+    }
+
+    /* ───────── RESPONSIVE ───────── */
+    @media (max-width: 600px) {
+      .header {
+        padding: 14px 16px;
+      }
+      .logo {
+        font-size: 22px;
+      }
+      .back-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+      .content {
+        padding: 0 14px 28px;
+      }
+      .hero h1 {
+        font-size: 24px;
+        line-height: 1.25;
+      }
+      .hero p {
+        font-size: 14px;
+      }
+      .method-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .method-card {
+        padding: 14px 16px;
+      }
+      .method-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+      }
+      #map {
+        height: 280px;
+      }
+      .loc-details {
+        grid-template-columns: 1fr;
+      }
+      .bottom-bar {
+        padding: 16px 0 24px;
+      }
+      .continue-btn {
+        max-width: 100%;
+        padding: 14px 24px;
+        font-size: 15px;
+      }
+      .app-footer {
+        padding: 24px 16px 30px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ HEADER ═══ -->
+  <header class="header">
+    <div class="logo-icon">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+        <circle cx="18" cy="18" r="16" stroke="url(#grad)" stroke-width="2"/>
+        <path d="M12 20 Q14 12 18 14 Q22 16 20 22 Q18 26 14 24 Q10 22 12 20Z" fill="url(#grad)" opacity="0.6"/>
+        <circle cx="22" cy="12" r="3" fill="#90e0ef" opacity="0.8"/>
+        <defs>
+          <linearGradient id="grad" x1="0" y1="0" x2="36" y2="36">
+            <stop offset="0%" stop-color="#00b4d8"/>
+            <stop offset="100%" stop-color="#90e0ef"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <div class="logo">MAUSAM</div>
+    <button class="back-btn" onclick="window.location.href='user_intrest.html'">
+      <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Back
+    </button>
+  </header>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <main class="content">
+    <div class="hero">
+      <div class="step-indicator">
+        <span class="step-dot done"></span>
+        <span class="step-dot active"></span>
+        <span>Step 2 of 2</span>
+      </div>
+      <h1>Where are you?</h1>
+      <p>Detect your location via GPS or tap anywhere on the map to set it manually. We'll show weather for this spot.</p>
+    </div>
+
+    <!-- Location Method Cards -->
+    <div class="method-row">
+      <div class="method-card" id="gpsCard" onclick="detectGPS()">
+        <div class="method-icon">📡</div>
+        <div class="method-info">
+          <div class="method-title">Use GPS</div>
+          <div class="method-desc">Auto-detect your current location instantly</div>
+        </div>
+      </div>
+      <div class="method-card" id="manualCard" onclick="focusSearch()">
+        <div class="method-icon">🗺️</div>
+        <div class="method-info">
+          <div class="method-title">Pick on Map</div>
+          <div class="method-desc">Search a city or tap a point on the map</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GPS Status -->
+    <div class="gps-status" id="gpsStatus">
+      <div class="gps-spinner" id="gpsSpinner"></div>
+      <span class="gps-status-text" id="gpsStatusText">Detecting your location…</span>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-wrapper" id="searchWrapper">
+      <svg class="search-icon" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/>
+      </svg>
+      <input
+        type="text"
+        class="search-input"
+        id="searchInput"
+        placeholder="Search for a city, place, or address…"
+        autocomplete="off"
+      />
+      <button class="search-clear" id="searchClear" onclick="clearSearch()">×</button>
+
+      <div class="search-results" id="searchResults"></div>
+    </div>
+
+    <!-- Map -->
+    <div class="map-wrapper" id="mapWrapper">
+      <div id="map"></div>
+      <div class="map-hint" id="mapHint">Click anywhere on the map to drop a pin</div>
+    </div>
+
+    <!-- Selected Location Card -->
+    <div class="location-card" id="locationCard">
+      <div class="loc-card-header">
+        <div class="loc-card-icon" id="locCardIcon">📍</div>
+        <div>
+          <div class="loc-card-title" id="locName">—</div>
+          <div class="loc-card-subtitle" id="locRegion">—</div>
+        </div>
+      </div>
+      <div class="loc-details">
+        <div class="loc-detail">
+          <div class="loc-detail-label">Latitude</div>
+          <div class="loc-detail-value" id="locLat">—</div>
+        </div>
+        <div class="loc-detail">
+          <div class="loc-detail-label">Longitude</div>
+          <div class="loc-detail-value" id="locLng">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sticky bottom CTA -->
+    <div class="bottom-bar">
+      <button class="continue-btn disabled" id="continueBtn" onclick="handleContinue()">
+        Finish Setup
+        <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+      <span class="hint-text" id="hintText">Set your location to continue</span>
+    </div>
+  </main>
+
+  <!-- ═══ APP FOOTER ═══ -->
+  <footer class="app-footer">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-logo">MAUSAM</div>
+        <div class="footer-tagline">Personalized Weather Homepage • SIH26076</div>
+      </div>
+      <p class="footer-rights">Rights yet to be reserved &copy; 2026 Mausam</p>
+      <p class="footer-authors">
+        Developed by <strong>Hariprasad P S</strong>, <strong>Kalangyiam M</strong>, and <strong>Harish M</strong>
+      </p>
+    </div>
+  </footer>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    // ═══════════════════════════════════════════════
+    //  STATE
+    // ═══════════════════════════════════════════════
+    let selectedLocation = null;   // { lat, lng, name, region }
+    let marker = null;
+    let searchTimeout = null;
+
+    // ═══════════════════════════════════════════════
+    //  MAP SETUP
+    // ═══════════════════════════════════════════════
+    const map = L.map('map', {
+      center: [20.5937, 78.9629],  // Center of India
+      zoom: 5,
+      zoomControl: true,
+      attributionControl: true,
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19,
+    }).addTo(map);
+
+    // Custom pulsing icon
+    const pulseIcon = L.divIcon({
+      className: 'pulse-marker',
+      html: '<div class="dot"></div><div class="ring"></div>',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
+    });
+
+    // Click on map to place marker
+    map.on('click', function (e) {
+      placeMarker(e.latlng.lat, e.latlng.lng);
+      reverseGeocode(e.latlng.lat, e.latlng.lng);
+    });
+
+    // Load saved location if exists
+    const savedLoc = localStorage.getItem('mausam_location');
+    if (savedLoc) {
+      try {
+        const loc = JSON.parse(savedLoc);
+        placeMarker(loc.lat, loc.lng);
+        setLocationCard(loc.lat, loc.lng, loc.name, loc.region);
+        map.setView([loc.lat, loc.lng], 12);
+      } catch (e) {}
+    }
+
+    // ═══════════════════════════════════════════════
+    //  GPS DETECTION
+    // ═══════════════════════════════════════════════
+    function detectGPS() {
+      const statusEl = document.getElementById('gpsStatus');
+      const textEl   = document.getElementById('gpsStatusText');
+      const spinner  = document.getElementById('gpsSpinner');
+
+      // Highlight GPS card
+      document.getElementById('gpsCard').classList.add('active');
+      document.getElementById('manualCard').classList.remove('active');
+
+      // Show loading
+      statusEl.className = 'gps-status visible';
+      spinner.style.display = 'block';
+      textEl.textContent = 'Detecting your location…';
+
+      if (!navigator.geolocation) {
+        statusEl.className = 'gps-status visible error';
+        spinner.style.display = 'none';
+        textEl.textContent = 'GPS is not supported by your browser.';
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+
+          // Success
+          statusEl.className = 'gps-status visible success';
+          spinner.style.display = 'none';
+          textEl.textContent = 'Location detected successfully!';
+
+          placeMarker(lat, lng);
+          map.setView([lat, lng], 13);
+          reverseGeocode(lat, lng);
+
+          // Hide status after delay
+          setTimeout(() => {
+            statusEl.className = 'gps-status';
+          }, 3000);
+        },
+        (err) => {
+          statusEl.className = 'gps-status visible error';
+          spinner.style.display = 'none';
+          const msgs = {
+            1: 'Location access denied. Please allow location permission.',
+            2: 'Location unavailable. Try searching manually.',
+            3: 'Request timed out. Try again or use the map.',
+          };
+          textEl.textContent = msgs[err.code] || 'Could not detect location.';
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      );
+    }
+
+    // ═══════════════════════════════════════════════
+    //  MARKER & LOCATION CARD
+    // ═══════════════════════════════════════════════
+    function placeMarker(lat, lng) {
+      if (marker) {
+        marker.setLatLng([lat, lng]);
+      } else {
+        marker = L.marker([lat, lng], { icon: pulseIcon }).addTo(map);
+      }
+
+      document.getElementById('mapWrapper').classList.add('has-pin');
+      document.getElementById('mapHint').classList.add('hidden');
+    }
+
+    function setLocationCard(lat, lng, name, region) {
+      selectedLocation = { lat, lng, name: name || 'Unknown', region: region || '' };
+
+      document.getElementById('locName').textContent   = selectedLocation.name;
+      document.getElementById('locRegion').textContent  = selectedLocation.region;
+      document.getElementById('locLat').textContent     = lat.toFixed(4) + '°';
+      document.getElementById('locLng').textContent     = lng.toFixed(4) + '°';
+
+      const card = document.getElementById('locationCard');
+      card.classList.add('visible', 'confirmed');
+      document.getElementById('locCardIcon').textContent = '✅';
+
+      updateContinueBtn();
+    }
+
+    function updateContinueBtn() {
+      const btn  = document.getElementById('continueBtn');
+      const hint = document.getElementById('hintText');
+      if (selectedLocation) {
+        btn.className  = 'continue-btn active';
+        hint.textContent = `Weather dashboard for ${selectedLocation.name}`;
+      } else {
+        btn.className  = 'continue-btn disabled';
+        hint.textContent = 'Set your location to continue';
+      }
+    }
+
+    // ═══════════════════════════════════════════════
+    //  REVERSE GEOCODE (Nominatim)
+    // ═══════════════════════════════════════════════
+    function reverseGeocode(lat, lng) {
+      // Show card with coords immediately
+      setLocationCard(lat, lng, 'Loading…', 'Fetching address…');
+
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=en`;
+
+      fetch(url, { headers: { 'User-Agent': 'MausamWeatherApp/1.0' } })
+        .then(r => r.json())
+        .then(data => {
+          const addr = data.address || {};
+          const name = addr.city || addr.town || addr.village || addr.county || addr.state || data.display_name?.split(',')[0] || 'Unknown';
+          const parts = [];
+          if (addr.state && addr.state !== name) parts.push(addr.state);
+          if (addr.country) parts.push(addr.country);
+          const region = parts.join(', ');
+          setLocationCard(lat, lng, name, region);
+        })
+        .catch(() => {
+          setLocationCard(lat, lng, `${lat.toFixed(3)}, ${lng.toFixed(3)}`, 'Could not resolve address');
+        });
+    }
+
+    // ═══════════════════════════════════════════════
+    //  SEARCH
+    // ═══════════════════════════════════════════════
+    const searchInput   = document.getElementById('searchInput');
+    const searchResults = document.getElementById('searchResults');
+    const searchClear   = document.getElementById('searchClear');
+
+    function focusSearch() {
+      document.getElementById('manualCard').classList.add('active');
+      document.getElementById('gpsCard').classList.remove('active');
+      searchInput.focus();
+    }
+
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim();
+      searchClear.classList.toggle('visible', q.length > 0);
+
+      clearTimeout(searchTimeout);
+      if (q.length < 2) {
+        searchResults.classList.remove('open');
+        return;
+      }
+
+      // Debounce 400ms
+      searchTimeout = setTimeout(() => searchPlaces(q), 400);
+    });
+
+    searchInput.addEventListener('focus', () => {
+      if (searchInput.value.trim().length >= 2) {
+        searchResults.classList.add('open');
+      }
+    });
+
+    // Close dropdown on outside click
+    document.addEventListener('click', (e) => {
+      if (!document.getElementById('searchWrapper').contains(e.target)) {
+        searchResults.classList.remove('open');
+      }
+    });
+
+    function searchPlaces(query) {
+      searchResults.innerHTML = '<div class="search-loading">Searching…</div>';
+      searchResults.classList.add('open');
+
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=6&accept-language=en`;
+
+      fetch(url, { headers: { 'User-Agent': 'MausamWeatherApp/1.0' } })
+        .then(r => r.json())
+        .then(results => {
+          if (!results.length) {
+            searchResults.innerHTML = '<div class="search-loading">No results found</div>';
+            return;
+          }
+
+          searchResults.innerHTML = results.map(r => {
+            const name = r.address?.city || r.address?.town || r.address?.village || r.name || r.display_name.split(',')[0];
+            const detail = r.display_name;
+            return `
+              <div class="search-result-item" onclick="selectSearchResult(${r.lat}, ${r.lon}, '${escapeStr(name)}', '${escapeStr(detail)}')">
+                <span class="result-pin">📍</span>
+                <div class="result-text">
+                  <div class="result-name">${escapeHTML(name)}</div>
+                  <div class="result-detail">${escapeHTML(detail)}</div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        })
+        .catch(() => {
+          searchResults.innerHTML = '<div class="search-loading">Network error — try again</div>';
+        });
+    }
+
+    function selectSearchResult(lat, lng, name, detail) {
+      searchResults.classList.remove('open');
+      searchInput.value = name;
+      searchClear.classList.add('visible');
+
+      placeMarker(lat, lng);
+      map.setView([lat, lng], 13);
+
+      // Build a region string from the detail
+      const parts = detail.split(',').slice(1).map(s => s.trim()).filter(Boolean);
+      const region = parts.slice(0, 2).join(', ');
+      setLocationCard(lat, lng, name, region);
+
+      showToast(`Location set to ${name}`);
+    }
+
+    function clearSearch() {
+      searchInput.value = '';
+      searchClear.classList.remove('visible');
+      searchResults.classList.remove('open');
+      searchInput.focus();
+    }
+
+    // ═══════════════════════════════════════════════
+    //  CONTINUE / SAVE
+    // ═══════════════════════════════════════════════
+    function handleContinue() {
+      if (!selectedLocation) {
+        showToast('Please select a location first');
+        return;
+      }
+
+      localStorage.setItem('mausam_location', JSON.stringify(selectedLocation));
+      showToast('Location saved! Building your dashboard…');
+
+      setTimeout(() => {
+        window.location.href = 'mainUI.html';
+      }, 800);
+    }
+
+    // ═══════════════════════════════════════════════
+    //  HELPERS
+    // ═══════════════════════════════════════════════
+    function escapeHTML(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    function escapeStr(str) {
+      return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    let toastTimer;
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+  </script>
+</body>
+</html>
